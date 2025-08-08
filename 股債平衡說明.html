@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股債平衡與再平衡互動模擬器 (含定期定額)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .bar-stock {
+            background-color: #3b82f6; /* blue-500 */
+        }
+        .bar-bond {
+            background-color: #22c55e; /* green-500 */
+        }
+        .btn-primary { background-color: #1d4ed8; } /* blue-700 */
+        .results-summary {
+            background-color: #f0f9ff; /* blue-50 */
+            border-left: 4px solid #3b82f6; /* blue-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+<div class="container w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 md:p-10">
+    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 text-center mb-4">股債平衡互動模擬器</h1>
+    <p class="text-center text-gray-500 mb-8">親手操作，體驗資產配置、再平衡與定期定額的強大之處</p>
+
+    <!-- What is Stock-Bond Balancing? -->
+    <div class="mb-10 p-6 border-t border-b border-gray-200 bg-blue-50/50 rounded-lg">
+        <h2 class="text-xl font-bold text-gray-700 mb-3 text-center">什麼是股債平衡？</h2>
+        <p class="text-gray-600 text-left">
+            股債平衡是一種經典的投資策略，核心概念是將資金同時投資在<strong class="text-blue-600">「股票」</strong>（高風險、高潛在報酬）和<strong class="text-green-600">「債券」</strong>（低風險、穩定收益）上。因為兩者價格走勢通常呈現互補的「蹺蹺板效應」，當股市下跌時，債券往往能提供保護，反之亦然。這種配置能有效<strong class="text-gray-800">降低整體資產的劇烈波動</strong>，幫助投資人穿越市場多空，實現長期穩健的增長。
+        </p>
+    </div>
+
+    <!-- Part 1: Allocation Simulator -->
+    <div class="simulator-section mb-10 p-6 border border-gray-200 rounded-xl bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-700 mb-4">一、 依年齡的股債比例配置</h2>
+        <p class="text-gray-600 mb-5">請拖動滑桿，看看不同年齡下，依據「100 - 年齡法則」的建議資產配置。</p>
+        <div class="slider-container mb-5">
+            <label for="age-slider" class="font-semibold text-gray-700 block mb-2">您的年齡: <span id="age-value" class="text-2xl font-bold text-blue-600 ml-2">30</span> 歲</label>
+            <input type="range" id="age-slider" min="30" max="70" value="30" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+        </div>
+        <div class="output-display bg-white border border-gray-200 rounded-lg p-4">
+            <div class="allocation-text text-lg text-center mb-3">
+                建議配置: <strong id="stock-pct-text" class="text-blue-600">股票 70%</strong> / <strong id="bond-pct-text" class="text-green-600">債券 30%</strong>
+            </div>
+            <div class="bar-chart flex h-7 rounded-md overflow-hidden">
+                <div id="stock-bar" class="bar-stock text-white transition-all duration-300 ease-in-out flex items-center justify-center font-semibold text-sm" style="width: 70%;">股票</div>
+                <div id="bond-bar" class="bar-bond text-white transition-all duration-300 ease-in-out flex items-center justify-center font-semibold text-sm" style="width: 30%;">債券</div>
+            </div>
+            <p id="stage-description" class="text-sm text-gray-500 mt-3 text-center italic">積極成長期：距離退休時間長，可承受較高風險以追求資本成長。</p>
+        </div>
+    </div>
+
+    <!-- Part 2: Regular Investment Simulator -->
+    <div class="simulator-section p-6 border border-gray-200 rounded-xl bg-gray-50">
+        <h2 class="text-xl font-bold text-gray-700 mb-4">二、 定期定額再平衡模擬</h2>
+        <p class="text-gray-600 mb-5">設定您的投資計畫，選擇一個長期市場趨勢，看看資產累積的結果。</p>
+        
+        <div class="grid md:grid-cols-2 gap-x-6 gap-y-4 mb-5">
+            <div class="input-group">
+                <label for="initial-capital" class="font-semibold text-gray-700 block mb-2">初始總資金 (NT$)</label>
+                <input type="number" id="initial-capital" value="1000000" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+             <div class="input-group">
+                <label for="regular-investment" class="font-semibold text-gray-700 block mb-2">每月定期投資 (NT$)</label>
+                <input type="number" id="regular-investment" value="10000" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="slider-container">
+                <label for="stock-ratio-slider" class="font-semibold text-gray-700 block mb-2">股票配置比例: <span id="stock-ratio-value" class="font-bold text-blue-600">60</span>%</label>
+                <input type="range" id="stock-ratio-slider" min="10" max="90" value="60" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            </div>
+            <div class="input-group">
+                <label for="investment-years" class="font-semibold text-gray-700 block mb-2">投資年期 (年)</label>
+                <input type="number" id="investment-years" value="20" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="input-group md:col-span-2">
+                <label for="market-scenario" class="font-semibold text-gray-700 block mb-2">選擇市場長期趨勢</label>
+                <select id="market-scenario" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="bull">長期牛市 (股市年均+12%, 債市+2%)</option>
+                    <option value="bear">長期熊市 (股市年均-2%, 債市+4%)</option>
+                    <option value="sideways" selected>長期震盪 (股市年均+7%, 債市+3%)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="btn-group mt-6">
+            <button class="btn-primary w-full text-white font-bold py-3 px-4 rounded-lg shadow-md hover:opacity-90 transition-transform transform hover:scale-105" onclick="runLongTermSimulation()">開始模擬</button>
+        </div>
+
+        <div id="long-term-results" class="results mt-6 space-y-4" style="display:none;">
+            <div class="results-summary p-4 rounded-lg">
+                <h3 class="text-lg font-bold text-gray-800 mb-3">模擬結果摘要</h3>
+                <div class="space-y-2 text-gray-700">
+                    <p>總投入本金：<strong id="result-total-investment" class="float-right"></strong></p>
+                    <hr class="my-2 border-gray-300">
+                    <p>股債平衡組合：<strong id="result-final-capital" class="float-right"></strong></p>
+                    <p>100% 股票組合：<strong id="result-stock-only" class="float-right"></strong></p>
+                    <p>100% 債券組合：<strong id="result-bond-only" class="float-right"></strong></p>
+                </div>
+            </div>
+            <div class="mt-6 bg-white p-4 rounded-lg border">
+                <canvas id="asset-growth-chart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Part 1: Age Allocation Logic
+    const ageSlider = document.getElementById('age-slider');
+    const ageValue = document.getElementById('age-value');
+    const stockPctText = document.getElementById('stock-pct-text');
+    const bondPctText = document.getElementById('bond-pct-text');
+    const stockBar = document.getElementById('stock-bar');
+    const bondBar = document.getElementById('bond-bar');
+    const stageDescription = document.getElementById('stage-description');
+
+    function updateAllocation() {
+        const age = parseInt(ageSlider.value);
+        const stockPct = 100 - age;
+        const bondPct = age;
+
+        ageValue.textContent = age;
+        stockPctText.innerHTML = `股票 ${stockPct}%`;
+        bondPctText.innerHTML = `債券 ${bondPct}%`;
+        
+        stockBar.style.width = `${stockPct}%`;
+        stockBar.textContent = stockPct > 10 ? '股票' : '';
+        bondBar.style.width = `${bondPct}%`;
+        bondBar.textContent = bondPct > 10 ? '債券' : '';
+
+        if (age < 45) {
+            stageDescription.textContent = "積極成長期：距離退休時間長，可承受較高風險以追求資本成長。";
+        } else if (age >= 45 && age < 60) {
+            stageDescription.textContent = "穩健平衡期：兼顧資產成長與風險控制，逐步增加防禦性部位。";
+        } else {
+            stageDescription.textContent = "保守收益期：臨近或已退休，首重資產保全與穩定現金流。";
+        }
+    }
+
+    ageSlider.addEventListener('input', updateAllocation);
+
+    // Part 2: Rebalancing Logic
+    const stockRatioSlider = document.getElementById('stock-ratio-slider');
+    const stockRatioValue = document.getElementById('stock-ratio-value');
+    
+    stockRatioSlider.addEventListener('input', () => {
+        stockRatioValue.textContent = stockRatioSlider.value;
+    });
+
+    function formatCurrency(num) {
+        return 'NT$ ' + Math.round(num).toLocaleString();
+    }
+    
+    let myChart = null;
+
+    function runLongTermSimulation() {
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        const initialCapital = parseFloat(document.getElementById('initial-capital').value) || 0;
+        const regularInvestment = parseFloat(document.getElementById('regular-investment').value) || 0;
+        const stockRatio = parseFloat(stockRatioSlider.value) / 100;
+        const bondRatio = 1 - stockRatio;
+        const years = parseInt(document.getElementById('investment-years').value) || 0;
+        const scenario = document.getElementById('market-scenario').value;
+
+        let avgStockReturn, stockVolatility, avgBondReturn, bondVolatility;
+        switch(scenario) {
+            case 'bull':
+                avgStockReturn = 0.12; stockVolatility = 0.18;
+                avgBondReturn = 0.02; bondVolatility = 0.03;
+                break;
+            case 'bear':
+                avgStockReturn = -0.02; stockVolatility = 0.20;
+                avgBondReturn = 0.04; bondVolatility = 0.04;
+                break;
+            case 'sideways':
+                avgStockReturn = 0.07; stockVolatility = 0.15;
+                avgBondReturn = 0.03; bondVolatility = 0.03;
+                break;
+        }
+
+        const yearlyInvestment = regularInvestment * 12;
+        const yearsData = ['初始'];
+        for (let i = 1; i <= years; i++) yearsData.push(`第 ${i} 年`);
+
+        // --- Simulate Balanced Portfolio ---
+        let stockValue = initialCapital * stockRatio;
+        let bondValue = initialCapital * bondRatio;
+        const balancedCapitalData = [initialCapital];
+        for (let i = 0; i < years; i++) {
+            stockValue += yearlyInvestment * stockRatio;
+            bondValue += yearlyInvestment * bondRatio;
+            stockValue *= (1 + (Math.random() - 0.5) * 2 * stockVolatility + avgStockReturn);
+            bondValue *= (1 + (Math.random() - 0.5) * 2 * bondVolatility + avgBondReturn);
+            const totalCapital = stockValue + bondValue;
+            stockValue = totalCapital * stockRatio;
+            bondValue = totalCapital * bondRatio;
+            balancedCapitalData.push(totalCapital);
+        }
+
+        // --- Simulate 100% Stock Portfolio ---
+        let stockOnlyValue = initialCapital;
+        const stockOnlyCapitalData = [initialCapital];
+        for (let i = 0; i < years; i++) {
+            stockOnlyValue += yearlyInvestment;
+            stockOnlyValue *= (1 + (Math.random() - 0.5) * 2 * stockVolatility + avgStockReturn);
+            stockOnlyCapitalData.push(stockOnlyValue);
+        }
+
+        // --- Simulate 100% Bond Portfolio ---
+        let bondOnlyValue = initialCapital;
+        const bondOnlyCapitalData = [initialCapital];
+        for (let i = 0; i < years; i++) {
+            bondOnlyValue += yearlyInvestment;
+            bondOnlyValue *= (1 + (Math.random() - 0.5) * 2 * bondVolatility + avgBondReturn);
+            bondOnlyCapitalData.push(bondOnlyValue);
+        }
+
+        // --- Display Results ---
+        const totalInvestment = initialCapital + (yearlyInvestment * years);
+        document.getElementById('result-total-investment').textContent = formatCurrency(totalInvestment);
+        document.getElementById('result-final-capital').textContent = formatCurrency(balancedCapitalData[years]);
+        document.getElementById('result-stock-only').textContent = formatCurrency(stockOnlyCapitalData[years]);
+        document.getElementById('result-bond-only').textContent = formatCurrency(bondOnlyCapitalData[years]);
+        
+        document.getElementById('long-term-results').style.display = 'block';
+
+        // --- Create Chart ---
+        const ctx = document.getElementById('asset-growth-chart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: yearsData,
+                datasets: [
+                {
+                    label: '股債平衡組合',
+                    data: balancedCapitalData,
+                    borderColor: '#3b82f6', // blue
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.1
+                },
+                {
+                    label: '100% 股票',
+                    data: stockOnlyCapitalData,
+                    borderColor: '#ef4444', // red
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    fill: false,
+                    tension: 0.1
+                },
+                {
+                    label: '100% 債券',
+                    data: bondOnlyCapitalData,
+                    borderColor: '#8b5cf6', // violet
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '不同投資策略資產增長趨勢圖',
+                        font: { size: 16, weight: 'bold' },
+                        padding: { top: 10, bottom: 20 }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    label += formatCurrency(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: { display: true, text: '總資產價值 (NT$)' },
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + 'M';
+                                if (value >= 1000) return (value / 1000) + 'K';
+                                return value;
+                            }
+                        }
+                    },
+                    x: {
+                        title: { display: true, text: '投資年期' }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Initialize view
+    updateAllocation();
+    stockRatioValue.textContent = stockRatioSlider.value;
+</script>
+</body>
+</html>
