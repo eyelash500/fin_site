@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分離式年金回推計算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f0f9ff; /* light sky blue */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="container mx-auto max-w-2xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">分離式年金回推計算機</h1>
+            <p class="text-gray-600 mt-2">適用於將「單筆資金(年複利)」與「定期定額(月複利)」分開規劃的情境。</p>
+        </header>
+
+        <main class="space-y-6">
+            <!-- 輸入區 -->
+            <div class="card p-6 md:p-8" id="input-card">
+                <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 mb-6">1. 設定您的目標與現況</h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="targetAmount" class="block text-sm font-medium text-gray-700 mb-1">目標退休金額 (元)</label>
+                        <input type="text" inputmode="numeric" id="targetAmount" value="20,000,000" class="currency-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                    <div>
+                        <label for="currentSavings" class="block text-sm font-medium text-gray-700 mb-1">目前已有資金 (元)</label>
+                        <input type="text" inputmode="numeric" id="currentSavings" value="1,000,000" class="currency-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="currentAge" class="block text-sm font-medium text-gray-700 mb-1">目前年齡</label>
+                            <input type="number" id="currentAge" value="30" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                        </div>
+                        <div>
+                            <label for="retirementAge" class="block text-sm font-medium text-gray-700 mb-1">預計退休年齡</label>
+                            <input type="number" id="retirementAge" value="65" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="calculateBtn" class="mt-8 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    開始計算
+                </button>
+            </div>
+            
+            <!-- 結果區 (預設隱藏) -->
+            <div id="results" class="hidden">
+                 <h2 class="text-2xl font-bold text-gray-700 text-center mb-6">2. 計算結果</h2>
+                 
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <!-- 4% 結果卡 -->
+                    <div id="result-card-4" class="card p-6">
+                        <p class="text-lg font-semibold text-gray-500">穩健型</p>
+                        <p class="text-3xl font-bold text-blue-500 my-2">4%</p>
+                        <p class="text-sm text-gray-500 mb-4">年化報酬率</p>
+                        <hr class="my-4">
+                        <p class="text-sm text-gray-600">每月需投入</p>
+                        <p id="result-4" class="text-2xl font-bold text-gray-800">0 元</p>
+                    </div>
+
+                    <!-- 8% 結果卡 -->
+                    <div id="result-card-8" class="card p-6 border-2 border-sky-400 relative">
+                        <span class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-sky-400 text-white text-xs font-bold px-3 py-1 rounded-full">推薦</span>
+                        <p class="text-lg font-semibold text-gray-500">成長型</p>
+                        <p class="text-3xl font-bold text-sky-500 my-2">8%</p>
+                        <p class="text-sm text-gray-500 mb-4">年化報酬率</p>
+                        <hr class="my-4">
+                        <p class="text-sm text-gray-600">每月需投入</p>
+                        <p id="result-8" class="text-2xl font-bold text-gray-800">0 元</p>
+                    </div>
+
+                    <!-- 12% 結果卡 -->
+                    <div id="result-card-12" class="card p-6">
+                        <p class="text-lg font-semibold text-gray-500">積極型</p>
+                        <p class="text-3xl font-bold text-indigo-500 my-2">12%</p>
+                        <p class="text-sm text-gray-500 mb-4">年化報酬率</p>
+                        <hr class="my-4">
+                        <p class="text-sm text-gray-600">每月需投入</p>
+                        <p id="result-12" class="text-2xl font-bold text-gray-800">0 元</p>
+                    </div>
+                 </div>
+                 <div id="result-message" class="text-center mt-6 p-4 rounded-lg bg-green-100 text-green-800 font-medium hidden"></div>
+                
+                 <!-- 圖表區 -->
+                 <div id="chart-container" class="card p-6 mt-6 hidden">
+                    <h3 id="chart-title" class="text-xl font-bold text-gray-700 text-center mb-4">不同報酬率下的財富累積比較</h3>
+                    <canvas id="accumulationChart"></canvas>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="text-center mt-8 text-sm text-gray-500">
+            <p><a href="https://eyelash500.github.io/fin_site/%E8%82%A1%E5%B9%B3%E8%A1%A1%E8%AA%AA%E6%98%8E.html" class="hover:underline">Tony 的金融工具</a> © 2025 by <a href="https://github.com/eyelash500/" class="hover:underline">Tony Wu</a> is licensed under <a href="https://creativecommons.org/licenses/by-nd/4.0/" class="hover:underline">CC BY-ND 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC Icon" style="max-width: 1em;max-height:1em;margin-left: .2em;display: inline-block; vertical-align: middle;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY Icon" style="max-width: 1em;max-height:1em;margin-left: .2em;display: inline-block; vertical-align: middle;"><img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND Icon" style="max-width: 1em;max-height:1em;margin-left: .2em;display: inline-block; vertical-align: middle;"></p>
+            <p class="mt-1">此工具僅供說明參考，不構成任何投資建議。</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM 元素
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultsEl = document.getElementById('results');
+        const resultMessageEl = document.getElementById('result-message');
+        const chartContainer = document.getElementById('chart-container');
+        const chartTitle = document.getElementById('chart-title');
+        
+        let accumulationChart = null;
+
+        // 格式化數字為千分位字串
+        function formatNumberWithCommas(number) {
+            const roundedNumber = Math.round(number);
+            return new Intl.NumberFormat('en-US').format(roundedNumber);
+        }
+
+        // 將千分位字串解析為數字
+        function parseFormattedNumber(str) {
+            return parseFloat(String(str).replace(/,/g, '')) || 0;
+        }
+
+        // 格式化貨幣顯示
+        function formatCurrencyForDisplay(number, digits = 0) {
+            return new Intl.NumberFormat('zh-TW', { 
+                style: 'currency', 
+                currency: 'TWD',
+                minimumFractionDigits: digits,
+                maximumFractionDigits: digits,
+            }).format(number).replace('NT$', '').trim();
+        }
+
+        // 事件委派處理金額輸入框
+        document.querySelector('main').addEventListener('input', (e) => {
+            if (e.target.classList.contains('currency-input')) {
+                const value = e.target.value;
+                const numericValue = value.replace(/[^0-9]/g, '');
+                e.target.value = formatNumberWithCommas(numericValue);
+                if (e.target.value === '0') e.target.value = '';
+            }
+        });
+
+        // 渲染圖表
+        function renderAccumulationChart(labels, datasets) {
+            const ctx = document.getElementById('accumulationChart').getContext('2d');
+            if (accumulationChart) {
+                accumulationChart.destroy();
+            }
+            accumulationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { 
+                            ticks: { 
+                                callback: value => {
+                                    if (value >= 100000000) return `${value / 100000000}億`;
+                                    if (value >= 10000) return `${value / 10000}萬`;
+                                    return value;
+                                } 
+                            },
+                             title: {
+                                display: true,
+                                text: '累積資產 (元)'
+                            }
+                        },
+                        x: { 
+                            title: { 
+                                display: true, 
+                                text: '年齡' 
+                            } 
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${formatCurrencyForDisplay(context.parsed.y)} 元`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 計算圖表數據 (分離式模型)
+        function calculateChartData(annualRate, monthlyInvestment, calculationData) {
+            const { currentSavings, currentAge, retirementAge } = calculationData;
+            const yearsToRetire = retirementAge - currentAge;
+            const monthlyRate = annualRate / 12;
+
+            const labels = [];
+            const data = [];
+
+            for (let y = 0; y <= yearsToRetire; y++) {
+                const age = currentAge + y;
+                const months = y * 12;
+
+                const fvOfSavings = currentSavings * Math.pow(1 + annualRate, y);
+                const fvOfInvestments = monthlyInvestment > 0 ? monthlyInvestment * (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate : 0;
+                const totalAssets = fvOfSavings + fvOfInvestments;
+
+                labels.push(age);
+                data.push(totalAssets);
+            }
+            return { labels, data };
+        }
+
+        // 計算按鈕事件
+        calculateBtn.addEventListener('click', () => {
+            const targetAmount = parseFormattedNumber(document.getElementById('targetAmount').value);
+            const currentSavings = parseFormattedNumber(document.getElementById('currentSavings').value);
+            const currentAge = parseInt(document.getElementById('currentAge').value);
+            const retirementAge = parseInt(document.getElementById('retirementAge').value);
+
+            if (currentAge >= retirementAge || targetAmount <= 0) {
+                alert('請輸入合理的目標金額與年齡規劃 (目前年齡 < 退休年齡)');
+                return;
+            }
+
+            const calculationData = { currentSavings, currentAge, retirementAge };
+            const yearsToRetire = retirementAge - currentAge;
+            const totalMonths = yearsToRetire * 12;
+            const rates = [
+                { rate: 0.04, id: 4, color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
+                { rate: 0.08, id: 8, color: '#38bdf8', bgColor: 'rgba(56, 189, 248, 0.1)' },
+                { rate: 0.12, id: 12, color: '#6366f1', bgColor: 'rgba(99, 102, 241, 0.1)' }
+            ];
+
+            const chartDatasets = [];
+            let chartLabels = [];
+
+            rates.forEach(({ rate, id, color, bgColor }) => {
+                const monthlyRate = rate / 12;
+                const fvOfCurrentSavings = currentSavings * Math.pow(1 + rate, yearsToRetire);
+                const neededFromMonthly = targetAmount - fvOfCurrentSavings;
+                
+                let monthlyInvestment = 0;
+                if (neededFromMonthly > 0) {
+                    const fvFactor = (Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate;
+                    monthlyInvestment = neededFromMonthly / fvFactor;
+                }
+                
+                document.getElementById(`result-${id}`).textContent = `${formatNumberWithCommas(monthlyInvestment)} 元`;
+                
+                const { labels, data } = calculateChartData(rate, monthlyInvestment, calculationData);
+                if(chartLabels.length === 0) chartLabels = labels;
+
+                chartDatasets.push({
+                    label: `${rate * 100}% 年化報酬率`,
+                    data: data,
+                    borderColor: color,
+                    backgroundColor: bgColor,
+                    fill: true,
+                    tension: 0.1
+                });
+            });
+
+            const fvOfCurrentSavingsAtLowestRate = currentSavings * Math.pow(1 + rates[0].rate, yearsToRetire);
+            resultMessageEl.classList.toggle('hidden', fvOfCurrentSavingsAtLowestRate < targetAmount);
+            if (fvOfCurrentSavingsAtLowestRate >= targetAmount) {
+                resultMessageEl.textContent = '恭喜您！您的現有資金已足以在最低報酬率下達成目標，無需額外投入。';
+            }
+
+            renderAccumulationChart(chartLabels, chartDatasets);
+            chartContainer.classList.remove('hidden');
+            resultsEl.classList.remove('hidden');
+            resultsEl.scrollIntoView({ behavior: 'smooth' });
+        });
+        
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.currency-input').forEach(input => {
+                const numericValue = parseFormattedNumber(input.value);
+                input.value = numericValue > 0 ? formatNumberWithCommas(numericValue) : '';
+            });
+        });
+    </script>
+</body>
+</html>
+
+
