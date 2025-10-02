@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式退休金規劃計算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .form-input, .form-range {
+            @apply w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all;
+        }
+        .form-label {
+            @apply block mb-2 text-sm font-medium text-gray-300;
+        }
+        .card {
+            @apply bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-700;
+        }
+        .output-value {
+            @apply text-3xl sm:text-4xl font-bold tracking-tight;
+        }
+        /* Custom styles for range slider track and thumb for better visibility */
+        input[type=range]::-webkit-slider-runnable-track {
+            background: #374151; /* gray-700 */
+            height: 8px;
+            border-radius: 4px;
+        }
+        input[type=range]::-moz-range-track {
+            background: #374151;
+            height: 8px;
+            border-radius: 4px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            margin-top: -6px; /* center thumb on track */
+            background: #3b82f6; /* blue-500 */
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type=range]::-moz-range-thumb {
+            background: #3b82f6;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-7xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">
+                互動式退休金規劃計算機
+            </h1>
+            <p class="mt-3 text-lg text-gray-400 max-w-2xl mx-auto">
+                輸入您的財務狀況，滑動調整市場預期，即時探索您的退休藍圖。
+            </p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- Left Side: Inputs -->
+            <div class="lg:col-span-2">
+                <div class="card space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-2">您的現況</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="currentAge" class="form-label">目前年齡</label>
+                                <input type="number" id="currentAge" class="form-input" value="30">
+                            </div>
+                            <div>
+                                <label for="retirementAge" class="form-label">預計退休年齡</label>
+                                <input type="number" id="retirementAge" class="form-input" value="65">
+                            </div>
+                            <div>
+                                <label for="currentSavings" class="form-label">目前已準備的退休金</label>
+                                <input type="number" id="currentSavings" class="form-input" value="1000000">
+                            </div>
+                            <div>
+                                <label for="monthlyInvestment" class="form-label">每月投入金額</label>
+                                <input type="number" id="monthlyInvestment" class="form-input" value="15000">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="monthlySpending" class="form-label">退休後預計每月花費</label>
+                                <input type="number" id="monthlySpending" class="form-input" value="50000">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-2">市場預期</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="returnRate" class="form-label flex justify-between">
+                                    <span>預期年化投資報酬率 (%)</span>
+                                    <span id="returnRateValue" class="font-semibold text-blue-400">6%</span>
+                                </label>
+                                <input type="range" id="returnRate" class="form-range" min="1" max="15" step="0.5" value="6">
+                            </div>
+                            <div>
+                                <label for="inflationRate" class="form-label flex justify-between">
+                                    <span>預期通貨膨脹率 (%)</span>
+                                    <span id="inflationRateValue" class="font-semibold text-teal-400">2%</span>
+                                </label>
+                                <input type="range" id="inflationRate" class="form-range" min="0" max="5" step="0.1" value="2">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Outputs -->
+            <div class="lg:col-span-3">
+                <div class="card">
+                    <h2 class="text-2xl font-bold text-white mb-6">試算結果</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-gray-900/50 p-6 rounded-lg">
+                            <h3 class="text-md font-medium text-gray-400">預計退休時總資產</h3>
+                            <p id="totalAssets" class="output-value text-blue-400">NT$ 0</p>
+                        </div>
+                        <div class="bg-gray-900/50 p-6 rounded-lg">
+                            <h3 class="text-md font-medium text-gray-400">退休金缺口 / 盈餘</h3>
+                            <p id="retirementGap" class="output-value text-red-500">NT$ 0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                         <h3 class="text-md font-medium text-gray-400 mb-2">資產成長曲線</h3>
+                        <div class="bg-gray-900/50 p-4 rounded-lg h-64 sm:h-72">
+                            <canvas id="assetChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-md font-medium text-gray-400 mb-2">總結與建議</h3>
+                        <div id="summary" class="bg-gray-900/50 p-6 rounded-lg min-h-[100px] text-gray-300 prose prose-invert prose-p:my-2">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const currentAgeEl = document.getElementById('currentAge');
+        const retirementAgeEl = document.getElementById('retirementAge');
+        const currentSavingsEl = document.getElementById('currentSavings');
+        const monthlyInvestmentEl = document.getElementById('monthlyInvestment');
+        const monthlySpendingEl = document.getElementById('monthlySpending');
+        const returnRateEl = document.getElementById('returnRate');
+        const inflationRateEl = document.getElementById('inflationRate');
+
+        const returnRateValueEl = document.getElementById('returnRateValue');
+        const inflationRateValueEl = document.getElementById('inflationRateValue');
+
+        const totalAssetsEl = document.getElementById('totalAssets');
+        const retirementGapEl = document.getElementById('retirementGap');
+        const summaryEl = document.getElementById('summary');
+
+        // Chart.js instance
+        let assetChart;
+        const ctx = document.getElementById('assetChart').getContext('2d');
+
+        function initializeChart() {
+            if (assetChart) {
+                assetChart.destroy();
+            }
+            assetChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '累積資產',
+                        data: [],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '年齡',
+                                color: '#9ca3af'
+                            },
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '資產 (NT$)',
+                                color: '#9ca3af'
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                callback: function(value) {
+                                    if (value >= 1000000) return (value / 1000000) + 'M';
+                                    if (value >= 1000) return (value / 1000) + 'K';
+                                    return value;
+                                }
+                            },
+                             grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('zh-TW', {
+                style: 'currency',
+                currency: 'TWD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(value);
+        }
+
+        function calculateAndDisplay() {
+            // --- 1. Get Inputs ---
+            const currentAge = parseInt(currentAgeEl.value) || 0;
+            const retirementAge = parseInt(retirementAgeEl.value) || 0;
+            const currentSavings = parseFloat(currentSavingsEl.value) || 0;
+            const monthlyInvestment = parseFloat(monthlyInvestmentEl.value) || 0;
+            const monthlySpending = parseFloat(monthlySpendingEl.value) || 0;
+            const returnRate = parseFloat(returnRateEl.value) / 100;
+            const inflationRate = parseFloat(inflationRateEl.value) / 100;
+
+            // Update slider display values
+            returnRateValueEl.textContent = `${returnRateEl.value}%`;
+            inflationRateValueEl.textContent = `${inflationRateEl.value}%`;
+            
+            if (currentAge >= retirementAge) {
+                // Handle invalid input
+                totalAssetsEl.textContent = "N/A";
+                retirementGapEl.textContent = "N/A";
+                summaryEl.innerHTML = `<p>錯誤：預計退休年齡必須大於目前年齡。</p>`;
+                if (assetChart) {
+                    assetChart.data.labels = [];
+                    assetChart.data.datasets[0].data = [];
+                    assetChart.update();
+                }
+                return;
+            }
+
+            // --- 2. Core Calculation Logic ---
+            const yearsToGrow = retirementAge - currentAge;
+            const annualInvestment = monthlyInvestment * 12;
+
+            // Real rate of return, adjusted for inflation
+            const realReturnRate = ((1 + returnRate) / (1 + inflationRate)) - 1;
+
+            // A. FV of current savings
+            const fvCurrent = currentSavings * Math.pow(1 + returnRate, yearsToGrow);
+
+            // B. FV of future investments
+            let fvMonthly = 0;
+            if (returnRate > 0) {
+                 fvMonthly = annualInvestment * ((Math.pow(1 + returnRate, yearsToGrow) - 1) / returnRate);
+            } else {
+                 fvMonthly = annualInvestment * yearsToGrow; // Handle case where return rate is 0
+            }
+
+            const totalAssets = fvCurrent + fvMonthly;
+
+            // C. Calculate required nest egg
+            const spendingFirstYear = (monthlySpending * 12) * Math.pow(1 + inflationRate, yearsToGrow);
+            const requiredNestEgg = spendingFirstYear * 25; // Based on 4% rule
+
+            // D. Calculate gap
+            const retirementGap = requiredNestEgg - totalAssets;
+            
+            // --- 3. Update Outputs ---
+            totalAssetsEl.textContent = formatCurrency(totalAssets);
+            retirementGapEl.textContent = formatCurrency(retirementGap);
+            
+            if (retirementGap > 0) {
+                retirementGapEl.classList.remove('text-green-500');
+                retirementGapEl.classList.add('text-red-500');
+            } else {
+                retirementGapEl.classList.remove('text-red-500');
+                retirementGapEl.classList.add('text-green-500');
+            }
+
+            // --- 4. Generate Chart Data ---
+            const labels = [];
+            const data = [];
+            for (let i = 0; i <= yearsToGrow; i++) {
+                const age = currentAge + i;
+                labels.push(age);
+                
+                let assetAtYear;
+                const fvCurrentAtYear = currentSavings * Math.pow(1 + returnRate, i);
+                let fvMonthlyAtYear = 0;
+                 if (returnRate > 0) {
+                    fvMonthlyAtYear = annualInvestment * ((Math.pow(1 + returnRate, i) - 1) / returnRate);
+                 } else {
+                    fvMonthlyAtYear = annualInvestment * i;
+                 }
+                assetAtYear = fvCurrentAtYear + fvMonthlyAtYear;
+                data.push(assetAtYear);
+            }
+            
+            assetChart.data.labels = labels;
+            assetChart.data.datasets[0].data = data;
+            assetChart.update();
+
+            // --- 5. Generate Summary Text ---
+            let summaryHTML = '';
+            if (retirementGap <= -500000) {
+                summaryHTML = `
+                    <h4 class="font-bold text-lg text-green-400">恭喜！您的退休規劃非常紮實！</h4>
+                    <p>根據您的規劃，預計在 ${retirementAge} 歲退休時，您將累積約 ${formatCurrency(totalAssets)} 的資產，不僅能滿足您預期的退休生活品質，甚至還有 ${formatCurrency(Math.abs(retirementGap))} 的盈餘。</p>
+                    <p>您可以考慮提早退休、提高退休後的生活品質，或是將這筆資金作為傳承或慈善規劃。</p>
+                `;
+            } else if (retirementGap > -500000 && retirementGap <= 500000) {
+                summaryHTML = `
+                    <h4 class="font-bold text-lg text-yellow-400">做得很好！您正朝著正確的軌道前進！</h4>
+                    <p>您目前的計畫正穩健地朝目標邁進。預計在 ${retirementAge} 歲時，您能累積約 ${formatCurrency(totalAssets)} 的資產，這與您需要的 ${formatCurrency(requiredNestEgg)} 非常接近。</p>
+                    <p>請繼續保持目前的投資紀律，並建議每一到兩年重新檢視一次您的計畫。</p>
+                `;
+            } else if (retirementGap > 500000 && retirementGap <= 5000000) {
+                const suggestedIncrease = Math.ceil((retirementGap / yearsToGrow / 12) / 1000) * 1000;
+                summaryHTML = `
+                    <h4 class="font-bold text-lg text-orange-400">您有退休金缺口，但別擔心，現在調整還來得及！</h4>
+                    <p>我們發現您有 ${formatCurrency(retirementGap)} 的退休金缺口。要彌補這個缺口，您可以考慮以下幾種方式：</p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li><b>增加月投入：</b>試著將每月投入金額提高約 ${formatCurrency(suggestedIncrease)}。</li>
+                        <li><b>延後退休：</b>試著將退休年齡延後 2-3 年。</li>
+                        <li><b>提高報酬率：</b>若風險承受度允許，可研究是否能將投資組合的預期報酬率稍微提高。</li>
+                    </ul>
+                    <p class="mt-2">小小的調整，在長時間複利效應下會有巨大影響。</p>
+                `;
+            } else {
+                 summaryHTML = `
+                    <h4 class="font-bold text-lg text-red-500">警示：您的退休計畫需要立即採取行動！</h4>
+                    <p>您目前的規劃與退休目標之間存在 ${formatCurrency(retirementGap)} 的巨大鴻溝。我們強烈建議您必須重新審視您的計畫。</p>
+                    <p>最有效的方式是<b>大幅提高每月投入金額</b>，並考慮<b>延長您的職業生涯</b>。現在就開始行動至關重要，建議您尋求專業理財顧問的協助，制定更積極的追趕計畫。</p>
+                `;
+            }
+            summaryEl.innerHTML = summaryHTML;
+        }
+
+        // Event Listeners
+        const inputs = [currentAgeEl, retirementAgeEl, currentSavingsEl, monthlyInvestmentEl, monthlySpendingEl, returnRateEl, inflationRateEl];
+        inputs.forEach(input => input.addEventListener('input', calculateAndDisplay));
+        
+        // Initial Calculation on page load
+        window.addEventListener('load', () => {
+             initializeChart();
+             calculateAndDisplay();
+        });
+
+    </script>
+
+</body>
+</html>

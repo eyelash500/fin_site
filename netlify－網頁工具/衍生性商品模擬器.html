@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>衍生性商品風險模擬器</title>
+    <!-- 引入 Tailwind CSS 以快速打造專業介面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Chart.js 用於繪製動態損益圖表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P0T4VKVGXV"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    
+      gtag('config', 'G-P0T4VKVGXV');
+    </script>
+
+    <style>
+        /* 自訂樣式，改用更專業沉穩的 灰色/藍色 配色 */
+        body {
+            background-color: #f8fafc; /* 使用柔和的背景色 */
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem; /* 14px */
+            font-weight: 700; /* bold */
+            color: #374151; /* text-gray-700 */
+            margin-bottom: 0.25rem; /* mb-1 */
+        }
+        .form-input {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem; /* px-3 py-2 */
+            background-color: #f1f5f9; /* 更新：改為中性的淺灰色 (slate-100) */
+            border-width: 2px;
+            border-color: #cbd5e1; /* 更新：搭配的灰色邊框 (slate-300) */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #475569; /* 更新：聚焦時的深灰色邊框 (slate-600) */
+            box-shadow: 0 0 0 1px #475569; 
+        }
+        .scenario-btn {
+            width: 100%;
+            padding: 0.5rem 1rem; /* py-2 px-4 */
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 600; /* font-semibold */
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            border-width: 2px;
+        }
+        .scenario-btn.active {
+            /* 更新：已選中的按鈕使用經典藍色 */
+            background-color: #2563eb; /* bg-blue-600 */
+            color: #ffffff; /* text-white */
+            border-color: #2563eb; /* border-blue-600 */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+        }
+        .scenario-btn:not(.active) {
+            /* 更新：未選中的按鈕使用經典藍色邊框 */
+            background-color: #ffffff; /* bg-white */
+            color: #1d4ed8; /* text-blue-700 */
+            border-color: #3b82f6; /* border-blue-500 */
+        }
+        .scenario-btn:not(.active):hover {
+            background-color: #dbeafe; /* hover:bg-blue-50 */
+        }
+        /* 隱藏數字輸入框的上下箭頭 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">衍生性商品風險模擬器</h1>
+            <p class="mt-2 text-gray-600">互動分析結構型商品的潛在風險與回報。</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- 左側：控制面板 -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- 1. 情境選擇區 -->
+                <section class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold text-gray-800 border-b pb-3 mb-4">1. 選擇產品情境</h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="btn-pgn" class="scenario-btn active">保本參與型 (PGN)</button>
+                        <button id="btn-eln" class="scenario-btn">高收益增益型 (ELN)</button>
+                        <button id="btn-fcn" class="scenario-btn">固定配息型 (FCN)</button>
+                        <button id="btn-dci" class="scenario-btn">雙元貨幣型 (DCI)</button>
+                    </div>
+                </section>
+
+                <!-- 2. 參數輸入區 -->
+                <section class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold text-gray-800 border-b pb-3 mb-4">2. 輸入核心參數</h2>
+                    <div class="space-y-4">
+                        <!-- 通用參數 -->
+                        <div>
+                            <label for="initialInvestment" class="form-label">初始投資金額</label>
+                            <input type="number" id="initialInvestment" class="form-input" value="1000000">
+                        </div>
+                        <div>
+                            <label for="underlyingPrice" class="form-label">連結標的現價</label>
+                            <input type="number" id="underlyingPrice" class="form-input" value="1000">
+                        </div>
+                        <!-- PGN 專用參數 -->
+                        <div class="product-param pgn-param">
+                            <label for="pgnInitialPrice" class="form-label">(PGN) 期初價格</label>
+                            <input type="number" id="pgnInitialPrice" class="form-input" value="1000">
+                        </div>
+                        <div class="product-param pgn-param">
+                            <label for="participationRate" class="form-label">(PGN) 參與率 (%)</label>
+                            <input type="number" id="participationRate" class="form-input" value="80">
+                        </div>
+                        <div class="product-param pgn-param">
+                            <label for="cappedReturn" class="form-label">(PGN) 收益上限 (%)</label>
+                            <input type="number" id="cappedReturn" class="form-input" value="15">
+                        </div>
+                        <!-- ELN/FCN/DCI 專用參數 -->
+                        <div class="product-param eln-param fcn-param dci-param hidden">
+                            <label for="strikePrice" class="form-label">(ELN/FCN/DCI) 履約價格</label>
+                            <input type="number" id="strikePrice" class="form-input" value="1000">
+                        </div>
+                        <div class="product-param eln-param fcn-param dci-param hidden">
+                            <label for="couponRate" class="form-label">(ELN/FCN/DCI) 票面利率 (%)</label>
+                            <input type="number" id="couponRate" class="form-input" value="12">
+                        </div>
+                        <!-- FCN/DCI 專用參數 -->
+                        <div class="product-param fcn-param dci-param hidden">
+                            <label for="knockInBarrier" class="form-label">(FCN/DCI) 下檔保護價格</label>
+                            <input type="number" id="knockInBarrier" class="form-input" value="850">
+                        </div>
+                        <!-- 通用參數 -->
+                        <div>
+                            <label for="tenor" class="form-label">產品天期 (年)</label>
+                            <input type="number" id="tenor" class="form-input" value="1" min="0.1" step="0.1">
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 3. 互動核心 -->
+                <section class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold text-gray-800 border-b pb-3 mb-4">3. 預測到期股價</h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-4">
+                            <input type="range" id="maturityPriceSlider" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" min="0" max="5000" step="1" value="1200">
+                            <input type="number" id="maturityPriceInput" class="form-input w-28 text-center" min="0" max="5000" step="1" value="1200">
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 右側：結果呈現區 -->
+            <div class="lg:col-span-2 space-y-8">
+                <section class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">模擬結果</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">最終損益金額</div>
+                            <div id="finalPnL" class="text-3xl font-bold mt-1"></div>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-500">最終年化報酬率</div>
+                            <div id="annualizedRoR" class="text-3xl font-bold mt-1"></div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="bg-white p-6 rounded-lg shadow">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">動態損益圖表 (Payoff Diagram)</h2>
+                    <div class="h-96">
+                        <canvas id="payoffChart"></canvas>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="mt-12 text-center text-sm text-gray-500">
+            <p>
+                <a href="https://ithelp.ithome.com.tw/users/20103826/ironman/8423" class="text-blue-600 hover:underline">30 天打造你的 AI 客戶金融助理團隊</a> © 2025 by <a href="https://www.linkedin.com/in/tony-wu-5baa4b81/" class="text-blue-600 hover:underline">Eyelash＊睫毛</a> is licensed under <a href="https://creativecommons.org/licenses/by-nd/4.0/" class="text-blue-600 hover:underline">CC BY-ND 4.0</a><img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="" style="display: inline-block; max-width: 1em;max-height:1em;margin-left: .2em; vertical-align: middle;"><img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="" style="display: inline-block; max-width: 1em;max-height:1em;margin-left: .2em; vertical-align: middle;"><img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="" style="display: inline-block; max-width: 1em;max-height:1em;margin-left: .2em; vertical-align: middle;">
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DOM 元素集中管理 ---
+            const elements = {
+                buttons: {
+                    pgn: document.getElementById('btn-pgn'),
+                    eln: document.getElementById('btn-eln'),
+                    fcn: document.getElementById('btn-fcn'),
+                    dci: document.getElementById('btn-dci'),
+                },
+                inputs: {
+                    initialInvestment: document.getElementById('initialInvestment'),
+                    underlyingPrice: document.getElementById('underlyingPrice'),
+                    pgnInitialPrice: document.getElementById('pgnInitialPrice'),
+                    strikePrice: document.getElementById('strikePrice'),
+                    participationRate: document.getElementById('participationRate'),
+                    cappedReturn: document.getElementById('cappedReturn'),
+                    couponRate: document.getElementById('couponRate'),
+                    knockInBarrier: document.getElementById('knockInBarrier'),
+                    tenor: document.getElementById('tenor'),
+                    maturityPriceSlider: document.getElementById('maturityPriceSlider'),
+                    maturityPriceInput: document.getElementById('maturityPriceInput'),
+                },
+                outputs: {
+                    finalPnL: document.getElementById('finalPnL'),
+                    annualizedRoR: document.getElementById('annualizedRoR'),
+                },
+                paramGroups: document.querySelectorAll('.product-param'),
+                chartCanvas: document.getElementById('payoffChart'),
+            };
+
+            // --- 應用程式狀態管理 ---
+            let state = {
+                scenario: 'pgn', // 預設情境
+                chartInstance: null,
+            };
+
+            // --- 核心計算邏輯 ---
+
+            /**
+             * 根據不同產品情境，計算在特定到期價格下的損益。
+             * @param {object} params - 包含所有輸入參數的物件。
+             * @param {number} maturityPrice - 預測的到期股價。
+             * @returns {object} - 包含結構型商品損益 (pnl) 和單純持有損益 (buyAndHoldPnl) 的物件。
+             */
+            function calculatePayoff(params, maturityPrice) {
+                const {
+                    scenario, initialInvestment, underlyingPrice, pgnInitialPrice, strikePrice,
+                    participationRate, cappedReturn, couponRate, knockInBarrier
+                } = params;
+
+                let pnl = 0;
+
+                switch (scenario) {
+                    case 'pgn':
+                        if (maturityPrice <= pgnInitialPrice) {
+                            pnl = 0;
+                        } else {
+                            const underlyingReturn = (maturityPrice - pgnInitialPrice) / pgnInitialPrice;
+                            const participatedReturn = underlyingReturn * (participationRate / 100);
+                            const finalReturnRate = Math.min(participatedReturn, cappedReturn / 100);
+                            pnl = initialInvestment * finalReturnRate;
+                        }
+                        break;
+
+                    case 'eln':
+                    case 'dci': // DCI 簡化邏輯同 ELN
+                        if (maturityPrice >= strikePrice) {
+                            pnl = initialInvestment * (couponRate / 100);
+                        } else {
+                            const couponAmount = initialInvestment * (couponRate / 100);
+                            const stockLoss = (maturityPrice - strikePrice) * (initialInvestment / strikePrice);
+                            pnl = couponAmount + stockLoss;
+                        }
+                        break;
+
+                    case 'fcn':
+                         if (maturityPrice >= knockInBarrier) {
+                            pnl = initialInvestment * (couponRate / 100);
+                        } else { // 跌破下檔保護價
+                            const couponAmount = initialInvestment * (couponRate / 100);
+                            const stockLoss = (maturityPrice - strikePrice) * (initialInvestment / strikePrice);
+                            pnl = couponAmount + stockLoss;
+                        }
+                        break;
+                }
+                
+                // 計算「單純買進並持有」的損益
+                // 假設用初始投資金額去買股票，可以買到 initialInvestment / underlyingPrice 股
+                const sharesBought = initialInvestment > 0 && underlyingPrice > 0 ? initialInvestment / underlyingPrice : 0;
+                const buyAndHoldPnl = (maturityPrice - underlyingPrice) * sharesBought;
+                
+                return { pnl, buyAndHoldPnl };
+            }
+
+            // --- UI 更新函式 ---
+
+            /**
+             * 更新參數輸入區的可見性。
+             */
+            function updateParamVisibility() {
+                const scenario = state.scenario;
+                // 更新按鈕樣式
+                Object.values(elements.buttons).forEach(btn => btn.classList.remove('active'));
+                elements.buttons[scenario].classList.add('active');
+
+                // 更新參數區塊可見性
+                elements.paramGroups.forEach(group => {
+                    const isVisible = group.classList.contains(`${scenario}-param`);
+                    group.classList.toggle('hidden', !isVisible);
+                });
+            }
+
+            /**
+             * 更新滑桿範圍與數值，使其更貼近現實。
+             */
+            function updateSliderRange() {
+                // 修正：將滑桿上限固定為 5000
+                const maxRange = 5000;
+                const currentVal = parseFloat(elements.inputs.maturityPriceInput.value);
+                
+                elements.inputs.maturityPriceSlider.max = maxRange;
+                elements.inputs.maturityPriceInput.max = maxRange;
+
+                // 如果當前值超過新範圍，則調整
+                if (currentVal > maxRange) {
+                    elements.inputs.maturityPriceSlider.value = maxRange;
+                    elements.inputs.maturityPriceInput.value = maxRange;
+                }
+            }
+
+            /**
+             * 格式化數字以便顯示。
+             * @param {number} num - 要格式化的數字。
+             * @returns {string} - 格式化後的字串。
+             */
+            function formatCurrency(num) {
+                return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            }
+
+            /**
+             * 更新最終損益和年化報酬率的顯示。
+             */
+            function updateSummary(pnl, tenor, initialInvestment) {
+                // 更新損益金額
+                elements.outputs.finalPnL.textContent = `${formatCurrency(pnl)}`;
+                elements.outputs.finalPnL.className = pnl >= 0 ? 'text-3xl font-bold mt-1 text-green-600' : 'text-3xl font-bold mt-1 text-red-600';
+
+                // 更新年化報酬率
+                let ror = 0;
+                if (initialInvestment > 0 && tenor > 0) {
+                    ror = (pnl / initialInvestment) / tenor * 100;
+                }
+                elements.outputs.annualizedRoR.textContent = `${ror.toFixed(2)}%`;
+                elements.outputs.annualizedRoR.className = ror >= 0 ? 'text-3xl font-bold mt-1 text-green-600' : 'text-3xl font-bold mt-1 text-red-600';
+            }
+
+            /**
+             * 更新或初始化損益圖表。
+             */
+            function updateChart() {
+                const params = getAllParams();
+                const chartRange = parseFloat(elements.inputs.maturityPriceSlider.max);
+                const step = chartRange / 100; // 生成 100 個數據點
+                
+                const labels = [];
+                const productData = [];
+                const buyAndHoldData = [];
+
+                for (let price = 0; price <= chartRange; price += step) {
+                    labels.push(price);
+                    const { pnl, buyAndHoldPnl } = calculatePayoff(params, price);
+                    productData.push(pnl);
+                    buyAndHoldData.push(buyAndHoldPnl);
+                }
+
+                // 動態計算 Y 軸範圍 (僅根據結構型商品)
+                const minPnl = Math.min(...productData);
+                const maxPnl = Math.max(...productData);
+                const yAxisPadding = (maxPnl - minPnl) * 0.1 || Math.abs(maxPnl) * 0.2 || 1000;
+                const yMin = minPnl - yAxisPadding;
+                const yMax = maxPnl + yAxisPadding;
+
+                if (!state.chartInstance) {
+                    const ctx = elements.chartCanvas.getContext('2d');
+                    state.chartInstance = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: '結構型商品損益',
+                                    data: productData,
+                                    borderColor: 'rgb(249, 115, 22)', // 改為醒目的橘色
+                                    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                    borderWidth: 4, // 加粗線條
+                                    pointRadius: 0,
+                                    tension: 0.1,
+                                    fill: true,
+                                },
+                                {
+                                    label: '單純買進並持有損益',
+                                    data: buyAndHoldData,
+                                    borderColor: 'rgb(59, 130, 246)', // 經典藍色
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    pointRadius: 0,
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: { display: true, text: '到期時股價' }
+                                },
+                                y: {
+                                    title: { display: true, text: '損益金額' },
+                                    min: yMin,
+                                    max: yMax,
+                                    ticks: {
+                                        callback: value => formatCurrency(value)
+                                    }
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    mode: 'index',
+                                    intersect: false,
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += formatCurrency(context.parsed.y);
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                },
+                                legend: {
+                                    position: 'top',
+                                }
+                            },
+                            animation: {
+                                duration: 200 // 平滑的更新動畫
+                            }
+                        }
+                    });
+                } else {
+                    // 更新現有圖表數據和 Y 軸
+                    state.chartInstance.data.labels = labels;
+                    state.chartInstance.data.datasets[0].data = productData;
+                    state.chartInstance.data.datasets[1].data = buyAndHoldData;
+                    state.chartInstance.options.scales.y.min = yMin;
+                    state.chartInstance.options.scales.y.max = yMax;
+                    state.chartInstance.update();
+                }
+            }
+
+            // --- 主執行流程 ---
+
+            /**
+             * 從所有輸入框中獲取並解析參數。
+             * @returns {object} - 包含所有參數的物件。
+             */
+            function getAllParams() {
+                const params = { scenario: state.scenario };
+                for (const key in elements.inputs) {
+                    params[key] = parseFloat(elements.inputs[key].value) || 0;
+                }
+                return params;
+            }
+
+            /**
+             * 執行一次完整的模擬與 UI 更新。
+             */
+            function runSimulation() {
+                updateSliderRange(); // 確保滑桿範圍正確
+                const params = getAllParams();
+                const { pnl } = calculatePayoff(params, params.maturityPriceInput);
+                
+                updateSummary(pnl, params.tenor, params.initialInvestment);
+                updateChart();
+            }
+
+            // --- 事件監聽器設置 ---
+
+            // 情境按鈕點擊事件
+            Object.keys(elements.buttons).forEach(key => {
+                elements.buttons[key].addEventListener('click', () => {
+                    state.scenario = key;
+                    updateParamVisibility();
+                    runSimulation();
+                });
+            });
+
+            // 所有參數輸入框變動事件
+            Object.values(elements.inputs).forEach(input => {
+                input.addEventListener('input', runSimulation);
+            });
+
+            // 滑桿與數字輸入框雙向綁定
+            elements.inputs.maturityPriceSlider.addEventListener('input', (e) => {
+                elements.inputs.maturityPriceInput.value = e.target.value;
+            });
+            elements.inputs.maturityPriceInput.addEventListener('input', (e) => {
+                elements.inputs.maturityPriceSlider.value = e.target.value;
+            });
+
+            // --- 初始化 ---
+            function initialize() {
+                updateParamVisibility();
+                runSimulation();
+            }
+
+            initialize();
+        });
+    </script>
+
+</body>
+</html>

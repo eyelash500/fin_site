@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股債平衡與再平衡模擬器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P0T4VKVGXV"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-P0T4VKVGXV');
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 10px;
+            background: #e2e8f0; /* slate-200 */
+            outline: none;
+            border-radius: 5px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #0ea5e9; /* sky-500 */
+            cursor: pointer;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="container mx-auto max-w-5xl space-y-8">
+        <header class="text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">股債平衡與再平衡模擬器</h1>
+        </header>
+
+        <!-- 概念說明區 -->
+        <div class="card p-6 bg-sky-50 border border-sky-200">
+            <h2 class="text-xl font-bold text-sky-800 mb-2">什麼是「股債平衡」？</h2>
+            <p class="text-gray-700 leading-relaxed mb-4">
+                股債平衡是一種基礎的資產配置策略，核心概念是將資金同時投資於兩種相關性較低的資產：<strong class="text-gray-800">股票</strong>（通常波動較大，潛在報酬較高）與<strong class="text-gray-800">債券</strong>（通常波動較小，提供穩定現金流）。透過這個組合，期望能在市場上漲時不錯過機會，在市場下跌時降低整體資產的虧損幅度，達到「<strong class="text-gray-800">分散風險、平滑波動</strong>」的效果。
+            </p>
+            <h2 class="text-xl font-bold text-sky-800 mb-2">什麼是「再平衡」(Rebalancing)？</h2>
+            <p class="text-gray-700 leading-relaxed">
+                再平衡是一種投資紀律，旨在將投資組合的比例維持在您最初設定的目標。例如，您設定股債比例為 60/40。一段時間後，因股票大漲，比例可能會自然變成 75/25，這代表您的風險已偏離預期。
+                <br>
+                此時，「再平衡」就是<strong class="text-gray-800">賣掉部分上漲的股票，買入相對落後的債券</strong>，讓比例回到 60/40。這個動作看似違反人性，卻是強制您「高賣低買」、有效控管風險的關鍵操作。
+            </p>
+        </div>
+
+        <!-- 參數輸入區 -->
+        <div class="card p-6 md:p-8">
+            <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 mb-6">1. 模擬參數設定</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 左側參數 -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="initialInvestment" class="block text-sm font-medium text-gray-700">初始投資金額 (元)</label>
+                        <input type="text" id="initialInvestment" value="1,000,000" class="currency-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                    <div>
+                        <label for="simulationYears" class="block text-sm font-medium text-gray-700">模擬投資年期</label>
+                        <input type="number" id="simulationYears" value="20" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                </div>
+                <!-- 中間參數 -->
+                <div class="space-y-4">
+                    <div>
+                        <label for="stockReturn" class="block text-sm font-medium text-gray-700">股票預期年化報酬率 (%)</label>
+                        <input type="number" id="stockReturn" value="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                    <div>
+                        <label for="bondReturn" class="block text-sm font-medium text-gray-700">債券預期年化報酬率 (%)</label>
+                        <input type="number" id="bondReturn" value="4" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg">
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium text-gray-700">市場波動率 (%)</label>
+                        <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div class="flex items-center">
+                                <input type="radio" id="volatility-low" name="volatility-option" value="5" class="h-4 w-4 text-sky-600 border-gray-300 focus:ring-sky-500">
+                                <label for="volatility-low" class="ml-2 block text-sm text-gray-900">低 (5%)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="volatility-medium" name="volatility-option" value="15" checked class="h-4 w-4 text-sky-600 border-gray-300 focus:ring-sky-500">
+                                <label for="volatility-medium" class="ml-2 block text-sm text-gray-900">中 (15%)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="volatility-high" name="volatility-option" value="25" class="h-4 w-4 text-sky-600 border-gray-300 focus:ring-sky-500">
+                                <label for="volatility-high" class="ml-2 block text-sm text-gray-900">高 (25%)</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="volatility-custom-radio" name="volatility-option" value="custom" class="h-4 w-4 text-sky-600 border-gray-300 focus:ring-sky-500">
+                                <label for="volatility-custom-radio" class="ml-2 block text-sm text-gray-900">自定</label>
+                            </div>
+                        </div>
+                        <div id="custom-volatility-container" class="mt-2 hidden">
+                             <input type="number" id="volatility" value="15" class="w-full rounded-md border-gray-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-lg" placeholder="請輸入波動率">
+                        </div>
+                    </div>
+                </div>
+                <!-- 右側配置 -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-medium text-gray-700">初始資產配置比例</label>
+                    <div class="flex justify-between items-center text-lg font-bold">
+                        <span class="text-blue-600">股票: <span id="stock-percent-display">60</span>%</span>
+                        <span class="text-green-600">債券: <span id="bond-percent-display">40</span>%</span>
+                    </div>
+                    <input type="range" id="allocation-slider" min="0" max="100" value="60" class="w-full mt-2">
+                </div>
+            </div>
+            <button id="start-simulation" class="mt-8 w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-lg">
+                開始模擬
+            </button>
+        </div>
+
+        <!-- 結果呈現區 -->
+        <div id="results-section" class="card p-6 md:p-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 mb-6">2. 模擬結果分析</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
+                <!-- 有再平衡結果 -->
+                <div class="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                    <h3 class="text-lg font-semibold text-blue-800">有再平衡 (每年底)</h3>
+                    <p class="text-sm text-gray-600 mt-1">最終資產總額</p>
+                    <p id="rebalanced-result" class="text-3xl font-bold text-blue-600 my-2">0 元</p>
+                    <p class="text-sm text-gray-600">最終資產配置</p>
+                    <p class="text-md font-semibold text-gray-800">股票 60% / 債券 40%</p>
+                </div>
+                <!-- 無再平衡結果 -->
+                <div class="bg-green-50 p-6 rounded-lg border border-green-200">
+                    <h3 class="text-lg font-semibold text-green-800">無再平衡</h3>
+                    <p class="text-sm text-gray-600 mt-1">最終資產總額</p>
+                    <p id="no-rebalance-result" class="text-3xl font-bold text-green-600 my-2">0 元</p>
+                    <p class="text-sm text-gray-600">最終資產配置 (已偏離)</p>
+                    <p id="final-allocation" class="text-md font-semibold text-red-600"></p>
+                </div>
+            </div>
+            <!-- 圖表 -->
+            <div class="mt-8">
+                <canvas id="simulation-chart"></canvas>
+            </div>
+        </div>
+
+        <footer class="text-center mt-8 text-sm text-gray-500 space-y-2">
+             <p>此工具僅供說明參考，不構成任何投資建議。</p>
+             <p class="inline-flex items-center flex-wrap justify-center gap-x-1">
+                <a href="https://ithelp.ithome.com.tw/users/20103826/ironman/8423" class="text-sky-600 hover:underline">30 天打造你的 AI 客戶金融助理團隊</a>
+                <span>© 2025 by</span>
+                <a href="https://www.linkedin.com/in/tony-wu-5baa4b81/" class="text-sky-600 hover:underline">Eyelash＊睫毛</a>
+                <span>is licensed under</span>
+                <a href="https://creativecommons.org/licenses/by-nd/4.0/" class="whitespace-nowrap inline-flex items-center text-sky-600 hover:underline">CC BY-ND 4.0
+                    <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="height: 1.2em; margin-left: .3em; vertical-align: text-bottom;">
+                    <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="height: 1.2em; margin-left: .2em; vertical-align: text-bottom;">
+                    <img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND" style="height: 1.2em; margin-left: .2em; vertical-align: text-bottom;"> 
+                </a>
+             </p>
+        </footer>
+
+    </div>
+
+    <script>
+        const allocationSlider = document.getElementById('allocation-slider');
+        const stockPercentDisplay = document.getElementById('stock-percent-display');
+        const bondPercentDisplay = document.getElementById('bond-percent-display');
+        const startBtn = document.getElementById('start-simulation');
+        const resultsSection = document.getElementById('results-section');
+        let simulationChart = null;
+
+        // --- Helper Functions ---
+        const formatCurrency = (num) => new Intl.NumberFormat('zh-TW').format(Math.round(num));
+        const parseFormattedNumber = (str) => parseFloat(String(str).replace(/,/g, '')) || 0;
+        
+        // 正規分布亂數產生器 (Box-Muller transform)
+        function randomNormal() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+
+        // --- Event Listeners ---
+        allocationSlider.addEventListener('input', () => {
+            stockPercentDisplay.textContent = allocationSlider.value;
+            bondPercentDisplay.textContent = 100 - allocationSlider.value;
+        });
+
+        document.getElementById('initialInvestment').addEventListener('input', (e) => {
+             const value = e.target.value;
+             const numericValue = value.replace(/[^0-9]/g, '');
+             e.target.value = formatCurrency(numericValue);
+             if (e.target.value === '0') e.target.value = '';
+        });
+
+        startBtn.addEventListener('click', runSimulation);
+
+        const volatilityOptions = document.querySelectorAll('input[name="volatility-option"]');
+        const customVolatilityContainer = document.getElementById('custom-volatility-container');
+
+        volatilityOptions.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'custom') {
+                    customVolatilityContainer.classList.remove('hidden');
+                } else {
+                    customVolatilityContainer.classList.add('hidden');
+                }
+            });
+        });
+
+        // --- Simulation Logic ---
+        function runSimulation() {
+            // 1. 取得所有參數
+            const initialInvestment = parseFormattedNumber(document.getElementById('initialInvestment').value);
+            const years = parseInt(document.getElementById('simulationYears').value);
+            const initialStockPct = parseInt(allocationSlider.value) / 100;
+            const initialBondPct = (100 - parseInt(allocationSlider.value)) / 100;
+            const expectedStockReturn = parseFloat(document.getElementById('stockReturn').value) / 100;
+            const expectedBondReturn = parseFloat(document.getElementById('bondReturn').value) / 100;
+            
+            const selectedVolatilityOption = document.querySelector('input[name="volatility-option"]:checked').value;
+            let volatilityValue;
+            if (selectedVolatilityOption === 'custom') {
+                volatilityValue = parseFloat(document.getElementById('volatility').value);
+            } else {
+                volatilityValue = parseFloat(selectedVolatilityOption);
+            }
+            const volatility = volatilityValue / 100;
+
+
+            if (initialInvestment <= 0 || years <= 0) {
+                alert('請輸入有效的初始金額與模擬年期。');
+                return;
+            }
+
+            // 2. 初始化資產
+            let rebalancedStock = initialInvestment * initialStockPct;
+            let rebalancedBond = initialInvestment * initialBondPct;
+            let noRebalanceStock = initialInvestment * initialStockPct;
+            let noRebalanceBond = initialInvestment * initialBondPct;
+
+            const rebalanceHistory = [initialInvestment];
+            const noRebalanceHistory = [initialInvestment];
+
+            // 3. 逐年模擬
+            for (let i = 0; i < years; i++) {
+                // 產生當年度的市場隨機報酬
+                const stockActualReturn = expectedStockReturn + randomNormal() * volatility;
+                const bondActualReturn = expectedBondReturn + randomNormal() * (volatility / 2); // 假設債券波動較小
+
+                // 計算「無再平衡」策略
+                noRebalanceStock *= (1 + stockActualReturn);
+                noRebalanceBond *= (1 + bondActualReturn);
+                noRebalanceHistory.push(noRebalanceStock + noRebalanceBond);
+
+                // 計算「有再平衡」策略
+                rebalancedStock *= (1 + stockActualReturn);
+                rebalancedBond *= (1 + bondActualReturn);
+                let totalRebalanced = rebalancedStock + rebalancedBond;
+                
+                // 執行再平衡
+                rebalancedStock = totalRebalanced * initialStockPct;
+                rebalancedBond = totalRebalanced * initialBondPct;
+                rebalanceHistory.push(totalRebalanced);
+            }
+
+            // 4. 更新結果顯示
+            const finalRebalanced = rebalanceHistory[rebalanceHistory.length - 1];
+            const finalNoRebalance = noRebalanceHistory[noRebalanceHistory.length - 1];
+            
+            document.getElementById('rebalanced-result').textContent = `${formatCurrency(finalRebalanced)} 元`;
+            document.getElementById('no-rebalance-result').textContent = `${formatCurrency(finalNoRebalance)} 元`;
+
+            const finalNoRebalanceStockPct = (noRebalanceStock / finalNoRebalance * 100).toFixed(1);
+            const finalNoRebalanceBondPct = (noRebalanceBond / finalNoRebalance * 100).toFixed(1);
+            document.getElementById('final-allocation').textContent = `股票 ${finalNoRebalanceStockPct}% / 債券 ${finalNoRebalanceBondPct}%`;
+
+            // 5. 繪製圖表
+            const labels = Array.from({ length: years + 1 }, (_, i) => `第 ${i} 年`);
+            renderChart(labels, rebalanceHistory, noRebalanceHistory);
+
+            resultsSection.classList.remove('hidden');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // --- Chart Rendering ---
+        function renderChart(labels, rebalanceData, noRebalanceData) {
+            const ctx = document.getElementById('simulation-chart').getContext('2d');
+            if (simulationChart) {
+                simulationChart.destroy();
+            }
+            simulationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '有再平衡 (每年底)',
+                            data: rebalanceData,
+                            borderColor: '#0ea5e9', // sky-500
+                            backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        },
+                        {
+                            label: '無再平衡',
+                            data: noRebalanceData,
+                            borderColor: '#10b981', // emerald-500
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: { display: true, text: '資產成長路徑模擬', font: { size: 18 } },
+                        tooltip: {
+                            callbacks: {
+                                label: context => `${context.dataset.label}: ${formatCurrency(context.parsed.y)} 元`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: '總資產 (元)' },
+                            ticks: {
+                                callback: value => {
+                                    if (value >= 100000000) return `${value / 100000000}億`;
+                                    if (value >= 10000) return `${value / 10000}萬`;
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 初始化頁面
+        document.addEventListener('DOMContentLoaded', () => {
+             document.getElementById('initialInvestment').value = formatCurrency(1000000);
+        });
+    </script>
+</body>
+</html>
+
+

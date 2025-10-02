@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目標導向退休金回推試算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Google tag (gtag.js) --> 
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P0T4VKVGXV"></script> 
+    <script> 
+      window.dataLayer = window.dataLayer || []; 
+      function gtag(){dataLayer.push(arguments);} 
+      gtag('js', new Date()); 
+    
+      gtag('config', 'G-P0T4VKVGXV'); 
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f7f7f7;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+        }
+        .mode-btn {
+            transition: all 0.2s ease-in-out;
+            border: 2px solid transparent;
+        }
+        .mode-btn.active {
+            border-color: #3b82f6; /* blue-500 */
+            background-color: #eff6ff; /* blue-50 */
+            color: #1d4ed8; /* blue-800 */
+            font-weight: 600;
+        }
+        .form-input {
+            background-color: #f8fafc; /* slate-50 */
+            border-color: #94a3b8; /* slate-400 */
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+
+    <div class="container mx-auto max-w-4xl space-y-8">
+        <header class="text-center">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">目標導向退休金回推試算器</h1>
+            <p class="text-gray-600 mt-2">從您理想的退休月收入出發，回推您的行動方案。</p>
+        </header>
+
+        <!-- 參數輸入區 -->
+        <div class="card p-6 md:p-8">
+            <!-- 模式選擇 -->
+            <div class="mb-6">
+                <label class="block text-lg font-semibold text-gray-700 mb-3 text-center">1. 選擇您想解決的問題</label>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button class="mode-btn p-3 rounded-lg bg-gray-100 text-gray-600" data-mode="1">我該準備多少錢？</button>
+                    <button class="mode-btn p-3 rounded-lg bg-gray-100 text-gray-600 active" data-mode="2">我該月投多少錢？</button>
+                    <button class="mode-btn p-3 rounded-lg bg-gray-100 text-gray-600" data-mode="3">需要多少報酬率？</button>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <!-- 退休目標設定 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4">2. 退休目標設定</h3>
+                    <div>
+                        <label for="monthlyExpense" class="block text-sm font-medium text-gray-700">退休後希望每月可花費金額（以現在幣值估算）</label>
+                        <input type="text" id="monthlyExpense" value="50,000" class="currency-input mt-1 block w-full rounded-md shadow-sm form-input">
+                    </div>
+                </div>
+
+                <!-- 個人時間規劃 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4">3. 個人時間規劃</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div><label for="currentAge" class="block text-sm font-medium">目前年齡</label><input type="number" id="currentAge" value="30" class="form-input mt-1 w-full rounded-md shadow-sm"></div>
+                        <div><label for="retirementAge" class="block text-sm font-medium">預計退休年齡</label><input type="number" id="retirementAge" value="65" class="form-input mt-1 w-full rounded-md shadow-sm"></div>
+                        <div><label for="lifeExpectancy" class="block text-sm font-medium">預計活到幾歲</label><input type="number" id="lifeExpectancy" value="85" class="form-input mt-1 w-full rounded-md shadow-sm"></div>
+                    </div>
+                </div>
+
+                <!-- 現有資源盤點 -->
+                <div>
+                     <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4">4. 現有資源盤點（選填）</h3>
+                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <div><label for="currentSavings" class="block text-sm font-medium">目前已準備的退休金</label><input type="text" id="currentSavings" value="500,000" class="currency-input form-input mt-1 w-full rounded-md shadow-sm"></div>
+                        <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                            <div><label for="laborInsurancePension" class="block text-sm font-medium">勞保老年年金 (月領)</label><input type="text" id="laborInsurancePension" value="15,000" class="currency-input form-input mt-1 w-full rounded-md shadow-sm"></div>
+                            <div><label for="laborInsuranceStartAge" class="block text-sm font-medium">預計請領年齡</label><input type="number" id="laborInsuranceStartAge" value="65" class="form-input mt-1 w-full rounded-md shadow-sm"></div>
+                            <div><label for="laborPensionMonthly" class="block text-sm font-medium">勞退月領金額</label><input type="text" id="laborPensionMonthly" value="5,000" class="currency-input form-input mt-1 w-full rounded-md shadow-sm"></div>
+                            <div><label for="laborPensionStartAge" class="block text-sm font-medium">預計請領年齡</label><input type="number" id="laborPensionStartAge" value="60" class="form-input mt-1 w-full rounded-md shadow-sm"></div>
+                        </div>
+                        <div><label for="otherIncome" class="block text-sm font-medium">其他固定收入 (月領)</label><input type="text" id="otherIncome" value="0" class="currency-input form-input mt-1 w-full rounded-md shadow-sm"></div>
+                     </div>
+                </div>
+
+                <!-- 投資參數假設 -->
+                <div>
+                    <h3 class="text-xl font-bold text-gray-700 border-b pb-2 mb-4">5. 投資參數假設</h3>
+                    <div class="space-y-4">
+                        <!-- 通用參數 -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div>
+                                <label for="postRetirementReturn" class="block font-medium">退休後提領期報酬率: <span id="postRetirementReturnValue" class="font-bold text-blue-600">4</span>%</label>
+                                <input type="range" id="postRetirementReturn" min="1" max="10" value="4" class="mt-1 w-full">
+                            </div>
+                             <div>
+                                <label for="inflationRate" class="block font-medium">預估平均年通膨率: <span id="inflationRateValue" class="font-bold text-blue-600">2.5</span>%</label>
+                                <input type="range" id="inflationRate" min="0" max="10" step="0.5" value="2.5" class="mt-1 w-full">
+                            </div>
+                        </div>
+                        <!-- 動態參數 -->
+                        <div id="mode-2-params" class="mode-params">
+                            <label for="preRetirementReturn" class="block font-medium">退休前累積期報酬率: <span id="preRetirementReturnValue" class="font-bold text-blue-600">8</span>%</label>
+                            <input type="range" id="preRetirementReturn" min="1" max="15" value="8" class="mt-1 w-full">
+                        </div>
+                        <div id="mode-3-params" class="mode-params hidden">
+                            <label for="monthlyInvestment" class="block font-medium">預計每月可投資金額</label>
+                            <input type="text" id="monthlyInvestment" value="10,000" class="currency-input form-input mt-1 w-full rounded-md shadow-sm">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 計算按鈕 -->
+            <button id="calculateBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition duration-300">
+                開始回推計算
+            </button>
+        </div>
+
+        <!-- 結果呈現區 -->
+        <div id="results-section" class="card p-6 md:p-8 hidden">
+            <h2 class="text-2xl font-bold text-gray-700 border-b pb-3 mb-6">分析結果</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                <!-- 核心數據 -->
+                <div class="text-center md:text-left space-y-4">
+                    <div>
+                        <p class="text-gray-500">您個人需準備的</p>
+                        <h3 class="text-lg font-semibold text-gray-700">目標退休金總額</h3>
+                        <p id="target-fund-result" class="text-4xl font-bold text-blue-600 my-1">0</p>
+                    </div>
+                    <div id="main-result-container" class="bg-gray-100 p-4 rounded-lg">
+                        <!-- 動態結果顯示區 -->
+                    </div>
+                </div>
+                <!-- 圖表 -->
+                <div class="w-full h-64 md:h-80"><canvas id="result-chart"></canvas></div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-8 text-sm text-gray-500 space-y-2">
+            <p class="inline-flex items-center flex-wrap justify-center gap-x-1">
+               <a href="https://ithelp.ithome.com.tw/users/20103826/ironman/8423" class="text-blue-600 hover:underline">30 天打造你的 AI 客戶金融助理團隊</a>
+               <span>© 2025 by</span>
+               <a href="https://www.linkedin.com/in/tony-wu-5baa4b81/" class="text-blue-600 hover:underline">Eyelash＊睫毛</a>
+               <span>is licensed under</span>
+               <a href="https://creativecommons.org/licenses/by-nd/4.0/" class="whitespace-nowrap inline-flex items-center text-blue-600 hover:underline">CC BY-ND 4.0
+                   <img src="https://mirrors.creativecommons.org/presskit/icons/cc.svg" alt="CC" style="height: 1.2em; margin-left: .3em; vertical-align: text-bottom;">
+                   <img src="https://mirrors.creativecommons.org/presskit/icons/by.svg" alt="BY" style="height: 1.2em; margin-left: .2em; vertical-align: text-bottom;">
+                   <img src="https://mirrors.creativecommons.org/presskit/icons/nd.svg" alt="ND" style="height: 1.2em; margin-left: .2em; vertical-align: text-bottom;"> 
+               </a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements & State ---
+            let currentMode = 2; // Default to mode 2
+            let resultChart = null;
+            const modeButtons = document.querySelectorAll('.mode-btn');
+            const mode2Params = document.getElementById('mode-2-params');
+            const mode3Params = document.getElementById('mode-3-params');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const resultsSection = document.getElementById('results-section');
+            const mainContainer = document.querySelector('.container'); // The main container for event delegation
+
+            // --- Utility Functions ---
+            const formatNumber = (num) => new Intl.NumberFormat('en-US').format(num);
+            const parseNumber = (str) => parseFloat(String(str).replace(/,/g, '')) || 0;
+            const formatCurrency = (num) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num).replace('NT$', '').trim();
+
+            // --- Event Listeners ---
+            function setupSlider(sliderId, valueId) {
+                const slider = document.getElementById(sliderId);
+                const valueEl = document.getElementById(valueId);
+                if(slider && valueEl) {
+                    slider.addEventListener('input', (e) => valueEl.textContent = e.target.value);
+                }
+            }
+            ['postRetirementReturn', 'inflationRate', 'preRetirementReturn'].forEach(id => setupSlider(id, `${id}Value`));
+            
+            // Event delegation on the main container
+            if (mainContainer) {
+                mainContainer.addEventListener('input', (e) => {
+                    if (e.target.classList.contains('currency-input')) {
+                        const numVal = e.target.value.replace(/[^0-9]/g, '');
+                        e.target.value = numVal ? formatNumber(numVal) : '';
+                    }
+                });
+            }
+            
+            modeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modeButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentMode = parseInt(btn.dataset.mode);
+                    updateParamVisibility();
+                });
+            });
+
+            function updateParamVisibility() {
+                if (currentMode === 1) {
+                    mode2Params.classList.add('hidden');
+                    mode3Params.classList.add('hidden');
+                } else if (currentMode === 2) {
+                    mode2Params.classList.remove('hidden');
+                    mode3Params.classList.add('hidden');
+                } else { // Mode 3
+                    mode2Params.classList.add('hidden');
+                    mode3Params.classList.remove('hidden');
+                }
+            }
+            
+            if(calculateBtn) {
+                calculateBtn.addEventListener('click', runCalculation);
+            }
+            
+            // --- Charting ---
+            function renderChart(labels, data, title) {
+                const ctx = document.getElementById('result-chart').getContext('2d');
+                if (resultChart) resultChart.destroy();
+                resultChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: '資產總額', data,
+                            borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true, tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { title: { display: true, text: title, font: { size: 16 } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${formatCurrency(c.parsed.y)}` } } },
+                        scales: { y: { ticks: { callback: v => v >= 1e8 ? `${v/1e8}億` : (v >= 1e4 ? `${v/1e4}萬` : v) } }, x: { title: { display: true, text: '年齡' } } }
+                    }
+                });
+            }
+            
+            // --- Financial Calculation Logic ---
+            function calculateTargetFund(params) {
+                const { retirementAge, lifeExpectancy, monthlyExpense, laborInsurancePension, laborInsuranceStartAge, laborPensionMonthly, laborPensionStartAge, otherIncome, postRetirementReturn, inflationRate, currentAge } = params;
+                
+                const retirementYears = lifeExpectancy - retirementAge;
+                const workingYears = retirementAge - currentAge;
+                let targetFund = 0;
+
+                for (let i = 1; i <= retirementYears; i++) {
+                    const age = retirementAge + i;
+                    const yearsFromNow = workingYears + i;
+                    
+                    const inflatedMonthlyExpense = monthlyExpense * Math.pow(1 + inflationRate, yearsFromNow);
+                    
+                    let inflatedMonthlyIncome = otherIncome * Math.pow(1 + inflationRate, yearsFromNow);
+                    if (age >= laborInsuranceStartAge) inflatedMonthlyIncome += laborInsurancePension * Math.pow(1 + inflationRate, yearsFromNow);
+                    if (age >= laborPensionStartAge) inflatedMonthlyIncome += laborPensionMonthly * Math.pow(1 + inflationRate, yearsFromNow);
+                    
+                    const netMonthlyDeficit = Math.max(0, inflatedMonthlyExpense - inflatedMonthlyIncome);
+                    const annualDeficit = netMonthlyDeficit * 12;
+
+                    const pvOfDeficit = annualDeficit / Math.pow(1 + postRetirementReturn, i);
+                    targetFund += pvOfDeficit;
+                }
+                return targetFund;
+            }
+
+            function calculateMonthlyInvestment(targetFund, params) {
+                const { currentSavings, currentAge, retirementAge, preRetirementReturn } = params;
+                const workingYears = retirementAge - currentAge;
+                
+                const fvOfCurrentSavings = currentSavings * Math.pow(1 + preRetirementReturn, workingYears);
+                const neededFromMonthly = targetFund - fvOfCurrentSavings;
+
+                if (neededFromMonthly <= 0) return 0;
+
+                const monthlyRate = preRetirementReturn / 12;
+                if (monthlyRate === 0) return neededFromMonthly / (workingYears * 12);
+
+                const totalMonths = workingYears * 12;
+                const fvFactor = (Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate;
+                
+                return neededFromMonthly / fvFactor;
+            }
+            
+            function calculateRequiredRate(targetFund, params) {
+                const { currentSavings, monthlyInvestment, currentAge, retirementAge } = params;
+                const workingYears = retirementAge - currentAge;
+                const totalMonths = workingYears * 12;
+
+                if (currentSavings >= targetFund) return 0;
+
+                let lowRate = 0, highRate = 0.5; // Search between 0% and 50%
+                let midRate, fv;
+
+                for(let i=0; i < 100; i++) {
+                    midRate = (lowRate + highRate) / 2;
+                    if (midRate < 1e-9) {
+                        fv = (currentSavings) + (monthlyInvestment * totalMonths);
+                    } else {
+                        const monthlyMidRate = midRate / 12;
+                        const fvSavings = currentSavings * Math.pow(1 + midRate, workingYears);
+                        const fvInvestments = monthlyInvestment * (Math.pow(1 + monthlyMidRate, totalMonths) - 1) / monthlyMidRate;
+                        fv = fvSavings + fvInvestments;
+                    }
+
+                    if (Math.abs(fv - targetFund) < 1000) {
+                        return midRate * 100;
+                    } else if (fv < targetFund) {
+                        lowRate = midRate;
+                    } else {
+                        highRate = midRate;
+                    }
+                }
+                return midRate * 100;
+            }
+
+            // --- Main Controller ---
+            function runCalculation() {
+                const params = {
+                    currentAge: parseInt(document.getElementById('currentAge').value) || 0,
+                    retirementAge: parseInt(document.getElementById('retirementAge').value) || 0,
+                    lifeExpectancy: parseInt(document.getElementById('lifeExpectancy').value) || 0,
+                    monthlyExpense: parseNumber(document.getElementById('monthlyExpense').value),
+                    currentSavings: parseNumber(document.getElementById('currentSavings').value),
+                    laborInsurancePension: parseNumber(document.getElementById('laborInsurancePension').value),
+                    laborInsuranceStartAge: parseInt(document.getElementById('laborInsuranceStartAge').value) || 0,
+                    laborPensionMonthly: parseNumber(document.getElementById('laborPensionMonthly').value),
+                    laborPensionStartAge: parseInt(document.getElementById('laborPensionStartAge').value) || 0,
+                    otherIncome: parseNumber(document.getElementById('otherIncome').value),
+                    postRetirementReturn: parseFloat(document.getElementById('postRetirementReturn').value) / 100,
+                    inflationRate: parseFloat(document.getElementById('inflationRate').value) / 100,
+                    preRetirementReturn: parseFloat(document.getElementById('preRetirementReturn').value) / 100,
+                    monthlyInvestment: parseNumber(document.getElementById('monthlyInvestment').value)
+                };
+
+                const targetFund = calculateTargetFund(params);
+                document.getElementById('target-fund-result').textContent = `${formatCurrency(targetFund)} 元`;
+                const mainResultContainer = document.getElementById('main-result-container');
+                
+                let resultValue, chartLabels, chartData;
+                const workingYears = params.retirementAge - params.currentAge;
+                chartLabels = Array.from({length: workingYears + 1}, (_, i) => params.currentAge + i);
+                chartData = [];
+
+                if (currentMode === 1) {
+                    mainResultContainer.innerHTML = `<p class="text-gray-600">這是您在退休時，個人理財帳戶需要準備的總金額，以支應退休後的所有開銷。</p>`;
+                } else if (currentMode === 2) {
+                    resultValue = calculateMonthlyInvestment(targetFund, params);
+                    mainResultContainer.innerHTML = `<p class="text-gray-600">在 <span class="font-bold text-blue-600">${params.preRetirementReturn * 100}%</span> 的年化報酬率下，您</p><h3 class="text-lg font-semibold">每月應投入金額</h3><p class="text-3xl font-bold text-blue-600">${formatCurrency(resultValue)} 元</p>`;
+                } else { // Mode 3
+                    resultValue = calculateRequiredRate(targetFund, params);
+                    mainResultContainer.innerHTML = `<p class="text-gray-600">若您每月投入 <span class="font-bold text-blue-600">${formatNumber(params.monthlyInvestment)}</span> 元，您</p><h3 class="text-lg font-semibold">所需年化報酬率</h3><p class="text-3xl font-bold text-blue-600">${resultValue.toFixed(2)} %</p>`;
+                }
+                
+                // Calculate and render chart
+                const finalRate = currentMode === 3 ? resultValue / 100 : params.preRetirementReturn;
+                const finalMonthlyInvestment = currentMode === 2 ? resultValue : params.monthlyInvestment;
+                const monthlyRate = finalRate / 12;
+
+                for(let i = 0; i <= workingYears; i++) {
+                    const fvS = params.currentSavings * Math.pow(1 + finalRate, i);
+                    const fvM = (finalMonthlyInvestment > 0 && monthlyRate > 0) ? finalMonthlyInvestment * ((Math.pow(1 + monthlyRate, i * 12) - 1) / monthlyRate) : finalMonthlyInvestment * i * 12;
+                    chartData.push(fvS + fvM);
+                }
+                
+                renderChart(chartLabels, chartData, '資產累積預計軌跡');
+                resultsSection.classList.remove('hidden');
+                resultsSection.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // --- Init ---
+            document.querySelectorAll('.currency-input').forEach(input => {
+                const numVal = parseNumber(input.value);
+                input.value = numVal > 0 ? formatNumber(numVal) : '';
+            });
+            updateParamVisibility();
+        });
+    </script>
+</body>
+</html>
+
